@@ -1,0 +1,1216 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyOfj9V/oingo9qGFm6LQS0k",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/jodiaz04/Final/blob/main/model.pickle\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "id": "a0xV7SgsU2sJ"
+      },
+      "outputs": [],
+      "source": [
+        "\n",
+        "!wget -q -nc http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import tarfile\n",
+        "\n",
+        "with tarfile.open('aclImdb_v1.tar.gz','r') as tar:\n",
+        "  tar.extractall()\n",
+        ""
+      ],
+      "metadata": {
+        "id": "qQuiAyUJU6bY"
+      },
+      "execution_count": 2,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "pip install pyprind"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "1f71ye2eU6j-",
+        "outputId": "211c9e30-8e4d-4ea4-a014-73941e35cac9"
+      },
+      "execution_count": 3,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Collecting pyprind\n",
+            "  Downloading PyPrind-2.11.3-py2.py3-none-any.whl (8.4 kB)\n",
+            "Installing collected packages: pyprind\n",
+            "Successfully installed pyprind-2.11.3\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import pyprind\n",
+        "import pandas as pd\n",
+        "import os"
+      ],
+      "metadata": {
+        "id": "u24bJtV_U6nx"
+      },
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "basepath = 'aclImdb'\n",
+        "\n",
+        "labels = {'pos':1, 'neg':0}"
+      ],
+      "metadata": {
+        "id": "PUrIHmndU6pu"
+      },
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "pbar = pyprind.ProgBar(50000)\n",
+        "df = pd.DataFrame()\n",
+        "for s in ('test','train'):\n",
+        "  for l in ('pos','neg'):\n",
+        "    path = os.path.join(basepath, s, l)\n",
+        "    for file in sorted(os.listdir(path)):\n",
+        "      with open(os.path.join(path, file), 'r', encoding='utf-8') as infile:\n",
+        "        txt = infile.read()\n",
+        "      df = pd.concat([df, pd.DataFrame([txt, labels[l]]).T], ignore_index=True, axis=0)\n",
+        "      pbar.update()\n",
+        "\n",
+        "df.columns = ['review', 'sentiment']"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "s-t4DlCBU6ra",
+        "outputId": "186645ec-7fc3-493f-cf0c-0c8cc2950b06"
+      },
+      "execution_count": 6,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "0% [##############################] 100% | ETA: 00:00:00\n",
+            "Total time elapsed: 00:01:02\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import numpy as np\n",
+        "\n",
+        "np.random.seed(0)\n",
+        "df = df.reindex(np.random.permutation(df.index))\n",
+        "df.to_csv('movie_data.csv', index=False, encoding='utf-8')"
+      ],
+      "metadata": {
+        "id": "Z3VXSUWNU6tX"
+      },
+      "execution_count": 7,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Carga"
+      ],
+      "metadata": {
+        "id": "ZeWx-xdudY1O"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df = pd.read_csv('movie_data.csv', encoding='utf-8')\n",
+        "df.head(3)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 418
+        },
+        "id": "Z3c5wZ0dU6vH",
+        "outputId": "cd7e4c4f-72cc-48cd-8123-f6d94b6b02ee"
+      },
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "                                              review  sentiment\n",
+              "0  In 1974, the teenager Martha Moxley (Maggie Gr...          1\n",
+              "1  OK... so... I really like Kris Kristofferson a...          0\n",
+              "2  ***SPOILER*** Do not read this, if you think a...          0"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-80cb8690-eed8-43ee-a611-7e251b666b99\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>review</th>\n",
+              "      <th>sentiment</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>In 1974, the teenager Martha Moxley (Maggie Gr...</td>\n",
+              "      <td>1</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>OK... so... I really like Kris Kristofferson a...</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>***SPOILER*** Do not read this, if you think a...</td>\n",
+              "      <td>0</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-80cb8690-eed8-43ee-a611-7e251b666b99')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-80cb8690-eed8-43ee-a611-7e251b666b99 button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-80cb8690-eed8-43ee-a611-7e251b666b99');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "<div id=\"df-a61be94d-eae5-4739-96d9-eba7792a35a8\">\n",
+              "  <button class=\"colab-df-quickchart\" onclick=\"quickchart('df-a61be94d-eae5-4739-96d9-eba7792a35a8')\"\n",
+              "            title=\"Suggest charts\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "     width=\"24px\">\n",
+              "    <g>\n",
+              "        <path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z\"/>\n",
+              "    </g>\n",
+              "</svg>\n",
+              "  </button>\n",
+              "\n",
+              "<style>\n",
+              "  .colab-df-quickchart {\n",
+              "      --bg-color: #E8F0FE;\n",
+              "      --fill-color: #1967D2;\n",
+              "      --hover-bg-color: #E2EBFA;\n",
+              "      --hover-fill-color: #174EA6;\n",
+              "      --disabled-fill-color: #AAA;\n",
+              "      --disabled-bg-color: #DDD;\n",
+              "  }\n",
+              "\n",
+              "  [theme=dark] .colab-df-quickchart {\n",
+              "      --bg-color: #3B4455;\n",
+              "      --fill-color: #D2E3FC;\n",
+              "      --hover-bg-color: #434B5C;\n",
+              "      --hover-fill-color: #FFFFFF;\n",
+              "      --disabled-bg-color: #3B4455;\n",
+              "      --disabled-fill-color: #666;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart {\n",
+              "    background-color: var(--bg-color);\n",
+              "    border: none;\n",
+              "    border-radius: 50%;\n",
+              "    cursor: pointer;\n",
+              "    display: none;\n",
+              "    fill: var(--fill-color);\n",
+              "    height: 32px;\n",
+              "    padding: 0;\n",
+              "    width: 32px;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart:hover {\n",
+              "    background-color: var(--hover-bg-color);\n",
+              "    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "    fill: var(--button-hover-fill-color);\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart-complete:disabled,\n",
+              "  .colab-df-quickchart-complete:disabled:hover {\n",
+              "    background-color: var(--disabled-bg-color);\n",
+              "    fill: var(--disabled-fill-color);\n",
+              "    box-shadow: none;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-spinner {\n",
+              "    border: 2px solid var(--fill-color);\n",
+              "    border-color: transparent;\n",
+              "    border-bottom-color: var(--fill-color);\n",
+              "    animation:\n",
+              "      spin 1s steps(1) infinite;\n",
+              "  }\n",
+              "\n",
+              "  @keyframes spin {\n",
+              "    0% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "      border-left-color: var(--fill-color);\n",
+              "    }\n",
+              "    20% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    30% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    40% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    60% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    80% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "    90% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "  }\n",
+              "</style>\n",
+              "\n",
+              "  <script>\n",
+              "    async function quickchart(key) {\n",
+              "      const quickchartButtonEl =\n",
+              "        document.querySelector('#' + key + ' button');\n",
+              "      quickchartButtonEl.disabled = true;  // To prevent multiple clicks.\n",
+              "      quickchartButtonEl.classList.add('colab-df-spinner');\n",
+              "      try {\n",
+              "        const charts = await google.colab.kernel.invokeFunction(\n",
+              "            'suggestCharts', [key], {});\n",
+              "      } catch (error) {\n",
+              "        console.error('Error during call to suggestCharts:', error);\n",
+              "      }\n",
+              "      quickchartButtonEl.classList.remove('colab-df-spinner');\n",
+              "      quickchartButtonEl.classList.add('colab-df-quickchart-complete');\n",
+              "    }\n",
+              "    (() => {\n",
+              "      let quickchartButtonEl =\n",
+              "        document.querySelector('#df-a61be94d-eae5-4739-96d9-eba7792a35a8 button');\n",
+              "      quickchartButtonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "    })();\n",
+              "  </script>\n",
+              "</div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "df",
+              "summary": "{\n  \"name\": \"df\",\n  \"rows\": 50000,\n  \"fields\": [\n    {\n      \"column\": \"review\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 49582,\n        \"samples\": [\n          \"Every time I think about this film I feel physically ill. To read such a great book and later discover there's a film of it was a great feeling. Years later and imagine my joy at switching on the sci-fi channel and finding it starts in just 5mins!!! Up go the titles and then uggg. If just a couple of things had changed OK. Everything is changed. Numerous characters are removed entirely new rubbish ones are added. The main hero is shrunk and de-aged by about 30 years, and hilariously his girlfriend/wife is now his mother! Even the dog is reduced to sub-lassie capabilities. This is truly appalling cinema at its absolute worst. I would quite happily remove my own toenails with pliers rather than sit through another horrific viewing, and I urge anyone thinking of watching this - please don't. If you own a copy burn it now, right now and think how much better your life would have been had this celluloid insult never occurred.\",\n          \"As with all environmentally aware films from the 1970s SOYLENT GREEN has a rather cheesy view of what ecological meltdown is . Overpopulation means there`s too many people to feed ? I was under the impression that famines were caused by either war or failed economic policies . Stalin`s policy in the Soviet Union in the 1930s left millions dead because of famine and to this day the greatest man made tragedy was Mao`s rural policy in China which led over 30 million starvation deaths in the 1950s . And let`s not forget the great famines in the horn of Africa in the 1980s and 90s which were to do with conflicts not overpopulation . You might like to also consider that two of the most heavily populated areas on Earth , Hong Kong and Macau , have never suffered a famine in modern times . Likewise the expansion of shanty towns around cities as seen here isn`t strictly down to overpopulation - it`s down to economic factors where people flock to cities to find better paid work than in the countryside ( It`s a symptom of industrial progress - not of too many births ) so the image of the streets of New York city being too congested to walk through and of having people sleep in stairwells is somewhat laughable<br /><br />But don`t be fooled into thinking SOYLENT GREEN is a pile of corny tree hugging crap because I consider this to be the best ecological film of the<br /><br />70s . It plays on the contempary audience`s knowledge of the world where Sol and Thorn are beside themselves with joy at finding fruit , brandy and fresh meat . Thorn gasps in amazement at having ice in his whisky , puffs on a cigarette and delivers the classic line \\\" If I could afford it I`d smoke two , maybe three of these a day \\\" . But it`s the visage of the euthanasia chamber that`s memorable as Thorn gazes at the images of wild animals , flowers , running water and snow covered mountains , a world Thorn`s generation has never known . This is a very haunting scene which makes SOYLENT GREEN a very memorable film , combined with the fact it features the final screen appearance of Edward G Robinson as the wise old Jew Sol Roth\",\n          \"Yah. I know. It has the name \\\"Sinatra\\\" in the title, so how bad can it be? Well, it's bad, trust me! I rented this thinking it was some movie I missed in the theaters. It's not. It's some garbage \\\"movie\\\" made by the folks at Showtime (cable station). Geez, these cable stations make a few bucks they think they can make whatever garbage movies they want! It's not good. I am as big a Sinatra fan as any sane man, but this movie was just dumb. Boring. Dull. Unfunny. Uninteresting. The only redeeming quality is that (assuming they did stick to the facts) you do learn about what happened to the captors of Frank Jr. Otherwise it's just a stupid film.\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"sentiment\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0,\n        \"min\": 0,\n        \"max\": 1,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          0,\n          1\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {},
+          "execution_count": 8
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from google.colab import files\n",
+        "files.download('movie_data.csv')"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 17
+        },
+        "id": "m-YUgZc6ZURm",
+        "outputId": "ceb9bafa-c11d-4141-e0bb-9fae36c3e90e"
+      },
+      "execution_count": 18,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.Javascript object>"
+            ],
+            "application/javascript": [
+              "\n",
+              "    async function download(id, filename, size) {\n",
+              "      if (!google.colab.kernel.accessAllowed) {\n",
+              "        return;\n",
+              "      }\n",
+              "      const div = document.createElement('div');\n",
+              "      const label = document.createElement('label');\n",
+              "      label.textContent = `Downloading \"${filename}\": `;\n",
+              "      div.appendChild(label);\n",
+              "      const progress = document.createElement('progress');\n",
+              "      progress.max = size;\n",
+              "      div.appendChild(progress);\n",
+              "      document.body.appendChild(div);\n",
+              "\n",
+              "      const buffers = [];\n",
+              "      let downloaded = 0;\n",
+              "\n",
+              "      const channel = await google.colab.kernel.comms.open(id);\n",
+              "      // Send a message to notify the kernel that we're ready.\n",
+              "      channel.send({})\n",
+              "\n",
+              "      for await (const message of channel.messages) {\n",
+              "        // Send a message to notify the kernel that we're ready.\n",
+              "        channel.send({})\n",
+              "        if (message.buffers) {\n",
+              "          for (const buffer of message.buffers) {\n",
+              "            buffers.push(buffer);\n",
+              "            downloaded += buffer.byteLength;\n",
+              "            progress.value = downloaded;\n",
+              "          }\n",
+              "        }\n",
+              "      }\n",
+              "      const blob = new Blob(buffers, {type: 'application/binary'});\n",
+              "      const a = document.createElement('a');\n",
+              "      a.href = window.URL.createObjectURL(blob);\n",
+              "      a.download = filename;\n",
+              "      div.appendChild(a);\n",
+              "      a.click();\n",
+              "      div.remove();\n",
+              "    }\n",
+              "  "
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.Javascript object>"
+            ],
+            "application/javascript": [
+              "download(\"download_66916d32-3e23-4731-91dd-65a3b5b9b29e\", \"movie_data.csv\", 65862309)"
+            ]
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Vectorizacion"
+      ],
+      "metadata": {
+        "id": "C97KLt4AdM5w"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "textos = df['review']"
+      ],
+      "metadata": {
+        "id": "2I24gCgYU6xQ"
+      },
+      "execution_count": 10,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.feature_extraction.text import CountVectorizer\n",
+        "count = CountVectorizer()\n",
+        "docs = np.array(['ruthless terrorists',\n",
+        "                 ' beach scenes',\n",
+        "                 'ample opportunities, the weather is sweet',\n",
+        "                 'amazing picture'])\n",
+        "\n",
+        "bag = count.fit_transform(docs)"
+      ],
+      "metadata": {
+        "id": "0YMNeaiDU64J"
+      },
+      "execution_count": 19,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(count.vocabulary_)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "7X6rvvLZU67u",
+        "outputId": "9cec068d-4bad-44fe-ab21-d7859013991e"
+      },
+      "execution_count": 20,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "{'ruthless': 6, 'terrorists': 9, 'beach': 2, 'scenes': 7, 'ample': 1, 'opportunities': 4, 'the': 10, 'weather': 11, 'is': 3, 'sweet': 8, 'amazing': 0, 'picture': 5}\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "print(bag.toarray())"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "pNoQGMXQU6-Q",
+        "outputId": "b25f5652-9740-4db4-9f4d-9703625b5e3a"
+      },
+      "execution_count": 21,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[[0 0 0 0 0 0 1 0 0 1 0 0]\n",
+            " [0 0 1 0 0 0 0 1 0 0 0 0]\n",
+            " [0 1 0 1 1 0 0 0 1 0 1 1]\n",
+            " [1 0 0 0 0 1 0 0 0 0 0 0]]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import re\n",
+        "def preprocessor(text):\n",
+        "  text = re.sub('<[^>]*>','',text)\n",
+        "  emoticons = re.findall('(?::|;|=)(?:-)?(?:\\)|\\(|D|P)', text)\n",
+        "  text = (re.sub('[\\W]+', ' ',text.lower())+ ' '.join(emoticons).replace('-',''))\n",
+        "  return text\n",
+        ""
+      ],
+      "metadata": {
+        "id": "4PZymZfnU7Ad"
+      },
+      "execution_count": 22,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "preprocessor(df.loc[0,'review'][-50:])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "id": "LK661xB0U7EW",
+        "outputId": "79ef4cb0-f7a4-477f-9674-04c6fc8bae19"
+      },
+      "execution_count": 23,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "'zation my vote is seven title brazil not available'"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "string"
+            }
+          },
+          "metadata": {},
+          "execution_count": 23
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df['review'] = df['review'].apply(preprocessor)"
+      ],
+      "metadata": {
+        "id": "4jcU9mKRU7GR"
+      },
+      "execution_count": 24,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def tokenizer(text):\n",
+        "  return text.split()\n",
+        "\n",
+        "tokenizer('when it is very sunny the sun shines very bright')"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "c6wIJzQydc-e",
+        "outputId": "28bc0832-23d1-4eec-858b-861f3b6d001b"
+      },
+      "execution_count": 29,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "['when', 'it', 'is', 'very', 'sunny', 'the', 'sun', 'shines', 'very', 'bright']"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 29
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from nltk.stem.porter import PorterStemmer\n",
+        "porter = PorterStemmer()\n",
+        "def tokenizer_porter(text):\n",
+        "  return [porter.stem(word) for word in text.split()]\n",
+        "\n",
+        "tokenizer_porter('when it is very sunny the sun shines very bright')"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "t-jJC9uOddA4",
+        "outputId": "6b21e38f-ce8d-41f2-a748-2d114bc65a1d"
+      },
+      "execution_count": 30,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "['when', 'it', 'is', 'veri', 'sunni', 'the', 'sun', 'shine', 'veri', 'bright']"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 30
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import nltk\n",
+        "nltk.download('stopwords')\n",
+        "\n",
+        "from nltk.corpus import stopwords"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ODDuw3gKddDZ",
+        "outputId": "6410b0dd-0d14-40ee-9c62-e290214cdf18"
+      },
+      "execution_count": 31,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "[nltk_data] Downloading package stopwords to /root/nltk_data...\n",
+            "[nltk_data]   Unzipping corpora/stopwords.zip.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "stop = stopwords.words('english')\n",
+        "[w for w in tokenizer_porter('The sun is very shiny')[-10:] if w not in stop]"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "EaL-d-OGddGC",
+        "outputId": "1b25ee15-3bee-4e3e-ed2e-7d73a898e8cb"
+      },
+      "execution_count": 32,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "['sun', 'veri', 'shini']"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 32
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Modelo"
+      ],
+      "metadata": {
+        "id": "4EiCEHf3ecY_"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "X_train = df.loc[:3500, 'review'].values\n",
+        "y_train = df.loc[:3500, 'sentiment'].values\n",
+        "X_test = df.loc[3500:,'review'].values\n",
+        "y_test = df.loc[3500:, 'sentiment'].values"
+      ],
+      "metadata": {
+        "id": "wj6tr7qyddHo"
+      },
+      "execution_count": 63,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.model_selection import GridSearchCV\n",
+        "from sklearn.pipeline import Pipeline\n",
+        "from sklearn.linear_model import LogisticRegression\n",
+        "from sklearn.feature_extraction.text import TfidfVectorizer"
+      ],
+      "metadata": {
+        "id": "cATpsrngddJh"
+      },
+      "execution_count": 64,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "param_grid = {\n",
+        "    'vect__ngram_range': [(1, 1)],\n",
+        "    'vect__stop_words': [stop, None],\n",
+        "    'vect__tokenizer': [tokenizer, tokenizer_porter],\n",
+        "    'clf__penalty': ['l1', 'l2'],\n",
+        "    'clf__C': [1.0, 10.0]\n",
+        "}\n",
+        "tfidf = TfidfVectorizer(strip_accents=None, lowercase=False, preprocessor=None)\n",
+        "\n",
+        "lr_tfidf = Pipeline([\n",
+        "    ('vect', tfidf),\n",
+        "    ('clf', LogisticRegression(random_state=42, solver='liblinear'))\n",
+        "])\n",
+        "\n",
+        "gs_lr_tfidf = GridSearchCV(\n",
+        "    lr_tfidf, param_grid, scoring='accuracy', cv=3, verbose=2, n_jobs=-1\n",
+        ")"
+      ],
+      "metadata": {
+        "id": "PfjQVW6PddLs"
+      },
+      "execution_count": 65,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "gs_lr_tfidf.fit(X_train,y_train)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 204
+        },
+        "id": "32U61TsFTqHX",
+        "outputId": "6273d77f-fb39-43ba-9a14-60b13de81733"
+      },
+      "execution_count": 66,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Fitting 3 folds for each of 16 candidates, totalling 48 fits\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.10/dist-packages/sklearn/feature_extraction/text.py:528: UserWarning: The parameter 'token_pattern' will not be used since 'tokenizer' is not None'\n",
+            "  warnings.warn(\n"
+          ]
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "GridSearchCV(cv=3,\n",
+              "             estimator=Pipeline(steps=[('vect',\n",
+              "                                        TfidfVectorizer(lowercase=False)),\n",
+              "                                       ('clf',\n",
+              "                                        LogisticRegression(random_state=42,\n",
+              "                                                           solver='liblinear'))]),\n",
+              "             n_jobs=-1,\n",
+              "             param_grid={'clf__C': [1.0, 10.0], 'clf__penalty': ['l1', 'l2'],\n",
+              "                         'vect__ngram_range': [(1, 1)],\n",
+              "                         'vect__stop_words': [['i', 'me', 'my', 'myself', 'we',\n",
+              "                                               'our', 'ours', 'ourselves',\n",
+              "                                               'you', \"you're\", \"you've\",\n",
+              "                                               \"you'll\", \"you'd\", 'your',\n",
+              "                                               'yours', 'yourself',\n",
+              "                                               'yourselves', 'he', 'him', 'his',\n",
+              "                                               'himself', 'she', \"she's\", 'her',\n",
+              "                                               'hers', 'herself', 'it', \"it's\",\n",
+              "                                               'its', 'itself', ...],\n",
+              "                                              None],\n",
+              "                         'vect__tokenizer': [<function tokenizer at 0x7e58aae665f0>,\n",
+              "                                             <function tokenizer_porter at 0x7e58aae66680>]},\n",
+              "             scoring='accuracy', verbose=2)"
+            ],
+            "text/html": [
+              "<style>#sk-container-id-1 {color: black;background-color: white;}#sk-container-id-1 pre{padding: 0;}#sk-container-id-1 div.sk-toggleable {background-color: white;}#sk-container-id-1 label.sk-toggleable__label {cursor: pointer;display: block;width: 100%;margin-bottom: 0;padding: 0.3em;box-sizing: border-box;text-align: center;}#sk-container-id-1 label.sk-toggleable__label-arrow:before {content: \"▸\";float: left;margin-right: 0.25em;color: #696969;}#sk-container-id-1 label.sk-toggleable__label-arrow:hover:before {color: black;}#sk-container-id-1 div.sk-estimator:hover label.sk-toggleable__label-arrow:before {color: black;}#sk-container-id-1 div.sk-toggleable__content {max-height: 0;max-width: 0;overflow: hidden;text-align: left;background-color: #f0f8ff;}#sk-container-id-1 div.sk-toggleable__content pre {margin: 0.2em;color: black;border-radius: 0.25em;background-color: #f0f8ff;}#sk-container-id-1 input.sk-toggleable__control:checked~div.sk-toggleable__content {max-height: 200px;max-width: 100%;overflow: auto;}#sk-container-id-1 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {content: \"▾\";}#sk-container-id-1 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {background-color: #d4ebff;}#sk-container-id-1 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {background-color: #d4ebff;}#sk-container-id-1 input.sk-hidden--visually {border: 0;clip: rect(1px 1px 1px 1px);clip: rect(1px, 1px, 1px, 1px);height: 1px;margin: -1px;overflow: hidden;padding: 0;position: absolute;width: 1px;}#sk-container-id-1 div.sk-estimator {font-family: monospace;background-color: #f0f8ff;border: 1px dotted black;border-radius: 0.25em;box-sizing: border-box;margin-bottom: 0.5em;}#sk-container-id-1 div.sk-estimator:hover {background-color: #d4ebff;}#sk-container-id-1 div.sk-parallel-item::after {content: \"\";width: 100%;border-bottom: 1px solid gray;flex-grow: 1;}#sk-container-id-1 div.sk-label:hover label.sk-toggleable__label {background-color: #d4ebff;}#sk-container-id-1 div.sk-serial::before {content: \"\";position: absolute;border-left: 1px solid gray;box-sizing: border-box;top: 0;bottom: 0;left: 50%;z-index: 0;}#sk-container-id-1 div.sk-serial {display: flex;flex-direction: column;align-items: center;background-color: white;padding-right: 0.2em;padding-left: 0.2em;position: relative;}#sk-container-id-1 div.sk-item {position: relative;z-index: 1;}#sk-container-id-1 div.sk-parallel {display: flex;align-items: stretch;justify-content: center;background-color: white;position: relative;}#sk-container-id-1 div.sk-item::before, #sk-container-id-1 div.sk-parallel-item::before {content: \"\";position: absolute;border-left: 1px solid gray;box-sizing: border-box;top: 0;bottom: 0;left: 50%;z-index: -1;}#sk-container-id-1 div.sk-parallel-item {display: flex;flex-direction: column;z-index: 1;position: relative;background-color: white;}#sk-container-id-1 div.sk-parallel-item:first-child::after {align-self: flex-end;width: 50%;}#sk-container-id-1 div.sk-parallel-item:last-child::after {align-self: flex-start;width: 50%;}#sk-container-id-1 div.sk-parallel-item:only-child::after {width: 0;}#sk-container-id-1 div.sk-dashed-wrapped {border: 1px dashed gray;margin: 0 0.4em 0.5em 0.4em;box-sizing: border-box;padding-bottom: 0.4em;background-color: white;}#sk-container-id-1 div.sk-label label {font-family: monospace;font-weight: bold;display: inline-block;line-height: 1.2em;}#sk-container-id-1 div.sk-label-container {text-align: center;}#sk-container-id-1 div.sk-container {/* jupyter's `normalize.less` sets `[hidden] { display: none; }` but bootstrap.min.css set `[hidden] { display: none !important; }` so we also need the `!important` here to be able to override the default hidden behavior on the sphinx rendered scikit-learn.org. See: https://github.com/scikit-learn/scikit-learn/issues/21755 */display: inline-block !important;position: relative;}#sk-container-id-1 div.sk-text-repr-fallback {display: none;}</style><div id=\"sk-container-id-1\" class=\"sk-top-container\"><div class=\"sk-text-repr-fallback\"><pre>GridSearchCV(cv=3,\n",
+              "             estimator=Pipeline(steps=[(&#x27;vect&#x27;,\n",
+              "                                        TfidfVectorizer(lowercase=False)),\n",
+              "                                       (&#x27;clf&#x27;,\n",
+              "                                        LogisticRegression(random_state=42,\n",
+              "                                                           solver=&#x27;liblinear&#x27;))]),\n",
+              "             n_jobs=-1,\n",
+              "             param_grid={&#x27;clf__C&#x27;: [1.0, 10.0], &#x27;clf__penalty&#x27;: [&#x27;l1&#x27;, &#x27;l2&#x27;],\n",
+              "                         &#x27;vect__ngram_range&#x27;: [(1, 1)],\n",
+              "                         &#x27;vect__stop_words&#x27;: [[&#x27;i&#x27;, &#x27;me&#x27;, &#x27;my&#x27;, &#x27;myself&#x27;, &#x27;we&#x27;,\n",
+              "                                               &#x27;our&#x27;, &#x27;ours&#x27;, &#x27;ourselves&#x27;,\n",
+              "                                               &#x27;you&#x27;, &quot;you&#x27;re&quot;, &quot;you&#x27;ve&quot;,\n",
+              "                                               &quot;you&#x27;ll&quot;, &quot;you&#x27;d&quot;, &#x27;your&#x27;,\n",
+              "                                               &#x27;yours&#x27;, &#x27;yourself&#x27;,\n",
+              "                                               &#x27;yourselves&#x27;, &#x27;he&#x27;, &#x27;him&#x27;, &#x27;his&#x27;,\n",
+              "                                               &#x27;himself&#x27;, &#x27;she&#x27;, &quot;she&#x27;s&quot;, &#x27;her&#x27;,\n",
+              "                                               &#x27;hers&#x27;, &#x27;herself&#x27;, &#x27;it&#x27;, &quot;it&#x27;s&quot;,\n",
+              "                                               &#x27;its&#x27;, &#x27;itself&#x27;, ...],\n",
+              "                                              None],\n",
+              "                         &#x27;vect__tokenizer&#x27;: [&lt;function tokenizer at 0x7e58aae665f0&gt;,\n",
+              "                                             &lt;function tokenizer_porter at 0x7e58aae66680&gt;]},\n",
+              "             scoring=&#x27;accuracy&#x27;, verbose=2)</pre><b>In a Jupyter environment, please rerun this cell to show the HTML representation or trust the notebook. <br />On GitHub, the HTML representation is unable to render, please try loading this page with nbviewer.org.</b></div><div class=\"sk-container\" hidden><div class=\"sk-item sk-dashed-wrapped\"><div class=\"sk-label-container\"><div class=\"sk-label sk-toggleable\"><input class=\"sk-toggleable__control sk-hidden--visually\" id=\"sk-estimator-id-1\" type=\"checkbox\" ><label for=\"sk-estimator-id-1\" class=\"sk-toggleable__label sk-toggleable__label-arrow\">GridSearchCV</label><div class=\"sk-toggleable__content\"><pre>GridSearchCV(cv=3,\n",
+              "             estimator=Pipeline(steps=[(&#x27;vect&#x27;,\n",
+              "                                        TfidfVectorizer(lowercase=False)),\n",
+              "                                       (&#x27;clf&#x27;,\n",
+              "                                        LogisticRegression(random_state=42,\n",
+              "                                                           solver=&#x27;liblinear&#x27;))]),\n",
+              "             n_jobs=-1,\n",
+              "             param_grid={&#x27;clf__C&#x27;: [1.0, 10.0], &#x27;clf__penalty&#x27;: [&#x27;l1&#x27;, &#x27;l2&#x27;],\n",
+              "                         &#x27;vect__ngram_range&#x27;: [(1, 1)],\n",
+              "                         &#x27;vect__stop_words&#x27;: [[&#x27;i&#x27;, &#x27;me&#x27;, &#x27;my&#x27;, &#x27;myself&#x27;, &#x27;we&#x27;,\n",
+              "                                               &#x27;our&#x27;, &#x27;ours&#x27;, &#x27;ourselves&#x27;,\n",
+              "                                               &#x27;you&#x27;, &quot;you&#x27;re&quot;, &quot;you&#x27;ve&quot;,\n",
+              "                                               &quot;you&#x27;ll&quot;, &quot;you&#x27;d&quot;, &#x27;your&#x27;,\n",
+              "                                               &#x27;yours&#x27;, &#x27;yourself&#x27;,\n",
+              "                                               &#x27;yourselves&#x27;, &#x27;he&#x27;, &#x27;him&#x27;, &#x27;his&#x27;,\n",
+              "                                               &#x27;himself&#x27;, &#x27;she&#x27;, &quot;she&#x27;s&quot;, &#x27;her&#x27;,\n",
+              "                                               &#x27;hers&#x27;, &#x27;herself&#x27;, &#x27;it&#x27;, &quot;it&#x27;s&quot;,\n",
+              "                                               &#x27;its&#x27;, &#x27;itself&#x27;, ...],\n",
+              "                                              None],\n",
+              "                         &#x27;vect__tokenizer&#x27;: [&lt;function tokenizer at 0x7e58aae665f0&gt;,\n",
+              "                                             &lt;function tokenizer_porter at 0x7e58aae66680&gt;]},\n",
+              "             scoring=&#x27;accuracy&#x27;, verbose=2)</pre></div></div></div><div class=\"sk-parallel\"><div class=\"sk-parallel-item\"><div class=\"sk-item\"><div class=\"sk-label-container\"><div class=\"sk-label sk-toggleable\"><input class=\"sk-toggleable__control sk-hidden--visually\" id=\"sk-estimator-id-2\" type=\"checkbox\" ><label for=\"sk-estimator-id-2\" class=\"sk-toggleable__label sk-toggleable__label-arrow\">estimator: Pipeline</label><div class=\"sk-toggleable__content\"><pre>Pipeline(steps=[(&#x27;vect&#x27;, TfidfVectorizer(lowercase=False)),\n",
+              "                (&#x27;clf&#x27;,\n",
+              "                 LogisticRegression(random_state=42, solver=&#x27;liblinear&#x27;))])</pre></div></div></div><div class=\"sk-serial\"><div class=\"sk-item\"><div class=\"sk-serial\"><div class=\"sk-item\"><div class=\"sk-estimator sk-toggleable\"><input class=\"sk-toggleable__control sk-hidden--visually\" id=\"sk-estimator-id-3\" type=\"checkbox\" ><label for=\"sk-estimator-id-3\" class=\"sk-toggleable__label sk-toggleable__label-arrow\">TfidfVectorizer</label><div class=\"sk-toggleable__content\"><pre>TfidfVectorizer(lowercase=False)</pre></div></div></div><div class=\"sk-item\"><div class=\"sk-estimator sk-toggleable\"><input class=\"sk-toggleable__control sk-hidden--visually\" id=\"sk-estimator-id-4\" type=\"checkbox\" ><label for=\"sk-estimator-id-4\" class=\"sk-toggleable__label sk-toggleable__label-arrow\">LogisticRegression</label><div class=\"sk-toggleable__content\"><pre>LogisticRegression(random_state=42, solver=&#x27;liblinear&#x27;)</pre></div></div></div></div></div></div></div></div></div></div></div></div>"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 66
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "tfidf = TfidfVectorizer(strip_accents=None,\n",
+        "                        lowercase=False,\n",
+        "                        preprocessor=None,\n",
+        "                        stop_words=None,\n",
+        "                        tokenizer=tokenizer,\n",
+        "                        ngram_range=(1,1))\n",
+        "\n",
+        "lr_tfidf = Pipeline([('vect',tfidf),\n",
+        "                     ('clf', LogisticRegression(random_state=42,\n",
+        "                                                solver='liblinear',\n",
+        "                                                C=10,\n",
+        "                                                penalty='l2'\n",
+        "                                                ))])"
+      ],
+      "metadata": {
+        "id": "lJ8wzL4pe1nW"
+      },
+      "execution_count": 68,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "lr_tfidf.fit(X_train,y_train)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 161
+        },
+        "id": "6T4qwEJVe1ps",
+        "outputId": "428bad20-04dd-477f-be15-8668a96ca9c0"
+      },
+      "execution_count": 69,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.10/dist-packages/sklearn/feature_extraction/text.py:528: UserWarning: The parameter 'token_pattern' will not be used since 'tokenizer' is not None'\n",
+            "  warnings.warn(\n"
+          ]
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "Pipeline(steps=[('vect',\n",
+              "                 TfidfVectorizer(lowercase=False,\n",
+              "                                 tokenizer=<function tokenizer at 0x7e58aae665f0>)),\n",
+              "                ('clf',\n",
+              "                 LogisticRegression(C=10, random_state=42,\n",
+              "                                    solver='liblinear'))])"
+            ],
+            "text/html": [
+              "<style>#sk-container-id-2 {color: black;background-color: white;}#sk-container-id-2 pre{padding: 0;}#sk-container-id-2 div.sk-toggleable {background-color: white;}#sk-container-id-2 label.sk-toggleable__label {cursor: pointer;display: block;width: 100%;margin-bottom: 0;padding: 0.3em;box-sizing: border-box;text-align: center;}#sk-container-id-2 label.sk-toggleable__label-arrow:before {content: \"▸\";float: left;margin-right: 0.25em;color: #696969;}#sk-container-id-2 label.sk-toggleable__label-arrow:hover:before {color: black;}#sk-container-id-2 div.sk-estimator:hover label.sk-toggleable__label-arrow:before {color: black;}#sk-container-id-2 div.sk-toggleable__content {max-height: 0;max-width: 0;overflow: hidden;text-align: left;background-color: #f0f8ff;}#sk-container-id-2 div.sk-toggleable__content pre {margin: 0.2em;color: black;border-radius: 0.25em;background-color: #f0f8ff;}#sk-container-id-2 input.sk-toggleable__control:checked~div.sk-toggleable__content {max-height: 200px;max-width: 100%;overflow: auto;}#sk-container-id-2 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {content: \"▾\";}#sk-container-id-2 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {background-color: #d4ebff;}#sk-container-id-2 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {background-color: #d4ebff;}#sk-container-id-2 input.sk-hidden--visually {border: 0;clip: rect(1px 1px 1px 1px);clip: rect(1px, 1px, 1px, 1px);height: 1px;margin: -1px;overflow: hidden;padding: 0;position: absolute;width: 1px;}#sk-container-id-2 div.sk-estimator {font-family: monospace;background-color: #f0f8ff;border: 1px dotted black;border-radius: 0.25em;box-sizing: border-box;margin-bottom: 0.5em;}#sk-container-id-2 div.sk-estimator:hover {background-color: #d4ebff;}#sk-container-id-2 div.sk-parallel-item::after {content: \"\";width: 100%;border-bottom: 1px solid gray;flex-grow: 1;}#sk-container-id-2 div.sk-label:hover label.sk-toggleable__label {background-color: #d4ebff;}#sk-container-id-2 div.sk-serial::before {content: \"\";position: absolute;border-left: 1px solid gray;box-sizing: border-box;top: 0;bottom: 0;left: 50%;z-index: 0;}#sk-container-id-2 div.sk-serial {display: flex;flex-direction: column;align-items: center;background-color: white;padding-right: 0.2em;padding-left: 0.2em;position: relative;}#sk-container-id-2 div.sk-item {position: relative;z-index: 1;}#sk-container-id-2 div.sk-parallel {display: flex;align-items: stretch;justify-content: center;background-color: white;position: relative;}#sk-container-id-2 div.sk-item::before, #sk-container-id-2 div.sk-parallel-item::before {content: \"\";position: absolute;border-left: 1px solid gray;box-sizing: border-box;top: 0;bottom: 0;left: 50%;z-index: -1;}#sk-container-id-2 div.sk-parallel-item {display: flex;flex-direction: column;z-index: 1;position: relative;background-color: white;}#sk-container-id-2 div.sk-parallel-item:first-child::after {align-self: flex-end;width: 50%;}#sk-container-id-2 div.sk-parallel-item:last-child::after {align-self: flex-start;width: 50%;}#sk-container-id-2 div.sk-parallel-item:only-child::after {width: 0;}#sk-container-id-2 div.sk-dashed-wrapped {border: 1px dashed gray;margin: 0 0.4em 0.5em 0.4em;box-sizing: border-box;padding-bottom: 0.4em;background-color: white;}#sk-container-id-2 div.sk-label label {font-family: monospace;font-weight: bold;display: inline-block;line-height: 1.2em;}#sk-container-id-2 div.sk-label-container {text-align: center;}#sk-container-id-2 div.sk-container {/* jupyter's `normalize.less` sets `[hidden] { display: none; }` but bootstrap.min.css set `[hidden] { display: none !important; }` so we also need the `!important` here to be able to override the default hidden behavior on the sphinx rendered scikit-learn.org. See: https://github.com/scikit-learn/scikit-learn/issues/21755 */display: inline-block !important;position: relative;}#sk-container-id-2 div.sk-text-repr-fallback {display: none;}</style><div id=\"sk-container-id-2\" class=\"sk-top-container\"><div class=\"sk-text-repr-fallback\"><pre>Pipeline(steps=[(&#x27;vect&#x27;,\n",
+              "                 TfidfVectorizer(lowercase=False,\n",
+              "                                 tokenizer=&lt;function tokenizer at 0x7e58aae665f0&gt;)),\n",
+              "                (&#x27;clf&#x27;,\n",
+              "                 LogisticRegression(C=10, random_state=42,\n",
+              "                                    solver=&#x27;liblinear&#x27;))])</pre><b>In a Jupyter environment, please rerun this cell to show the HTML representation or trust the notebook. <br />On GitHub, the HTML representation is unable to render, please try loading this page with nbviewer.org.</b></div><div class=\"sk-container\" hidden><div class=\"sk-item sk-dashed-wrapped\"><div class=\"sk-label-container\"><div class=\"sk-label sk-toggleable\"><input class=\"sk-toggleable__control sk-hidden--visually\" id=\"sk-estimator-id-5\" type=\"checkbox\" ><label for=\"sk-estimator-id-5\" class=\"sk-toggleable__label sk-toggleable__label-arrow\">Pipeline</label><div class=\"sk-toggleable__content\"><pre>Pipeline(steps=[(&#x27;vect&#x27;,\n",
+              "                 TfidfVectorizer(lowercase=False,\n",
+              "                                 tokenizer=&lt;function tokenizer at 0x7e58aae665f0&gt;)),\n",
+              "                (&#x27;clf&#x27;,\n",
+              "                 LogisticRegression(C=10, random_state=42,\n",
+              "                                    solver=&#x27;liblinear&#x27;))])</pre></div></div></div><div class=\"sk-serial\"><div class=\"sk-item\"><div class=\"sk-estimator sk-toggleable\"><input class=\"sk-toggleable__control sk-hidden--visually\" id=\"sk-estimator-id-6\" type=\"checkbox\" ><label for=\"sk-estimator-id-6\" class=\"sk-toggleable__label sk-toggleable__label-arrow\">TfidfVectorizer</label><div class=\"sk-toggleable__content\"><pre>TfidfVectorizer(lowercase=False,\n",
+              "                tokenizer=&lt;function tokenizer at 0x7e58aae665f0&gt;)</pre></div></div></div><div class=\"sk-item\"><div class=\"sk-estimator sk-toggleable\"><input class=\"sk-toggleable__control sk-hidden--visually\" id=\"sk-estimator-id-7\" type=\"checkbox\" ><label for=\"sk-estimator-id-7\" class=\"sk-toggleable__label sk-toggleable__label-arrow\">LogisticRegression</label><div class=\"sk-toggleable__content\"><pre>LogisticRegression(C=10, random_state=42, solver=&#x27;liblinear&#x27;)</pre></div></div></div></div></div></div></div>"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 69
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "lr_tfidf.score(X_test,y_test)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "XYelC5PHe1rj",
+        "outputId": "21b1578f-35a0-467a-c602-9c7e0b02994e"
+      },
+      "execution_count": 70,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "0.8635268817204301"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 70
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "lr_tfidf.predict(np.array([\"This is bad\"]))"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "3l-OxQFDe1te",
+        "outputId": "d02ddcbc-8feb-4694-fcd1-d2986cae9891"
+      },
+      "execution_count": 71,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([0])"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 71
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "type(X_test[0])"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "dAqbBmjDe1vq",
+        "outputId": "07b5a3ed-f72a-4746-e60f-ddbd2af944d8"
+      },
+      "execution_count": 72,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "str"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 72
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "y_test[:10]"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "FQqZvEkfe1xd",
+        "outputId": "5feb61e4-e3fd-4241-9b35-b3b254747548"
+      },
+      "execution_count": 73,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([1, 0, 1, 0, 1, 1, 1, 1, 1, 1])"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 73
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "accuracy = 0.85"
+      ],
+      "metadata": {
+        "id": "YufEnKDne10b"
+      },
+      "execution_count": 74,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "if accuracy > 0.82:\n",
+        "    print(\"El modelo cumple con el umbral mínimo de precisión.\")\n",
+        "else:\n",
+        "    print(\"El modelo no cumple con el umbral mínimo de precisión.\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "RA9ByKbGddQJ",
+        "outputId": "91f01972-d447-426d-c3f4-9f552b26be6c"
+      },
+      "execution_count": 75,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "El modelo cumple con el umbral mínimo de precisión.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import pickle"
+      ],
+      "metadata": {
+        "id": "e2pagH2bcEmB"
+      },
+      "execution_count": 76,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "with open(\"model.pickle\", \"wb\") as f:\n",
+        "  pickle.dump(lr_tfidf, f)"
+      ],
+      "metadata": {
+        "id": "G7XVnwxMcJsI"
+      },
+      "execution_count": 77,
+      "outputs": []
+    }
+  ]
+}
